@@ -1,15 +1,6 @@
-# Infrastructure de base de données MariaDB sous Debian
+# Aufbau einer sicheren MariaDB-Datenbankinfrastruktur unter Debian
 
 ## 1. Présentation du projet
-
-### Titre français
-
-Mise en place d'une infrastructure MariaDB sécurisée sous Debian
-
-### Titre allemand
-
-Aufbau einer sicheren MariaDB-Datenbankinfrastruktur unter Debian
-
 ### Contexte
 
 Ce projet est réalisé dans le cadre de la modularbeit consacrée à l'implémentation d'une base de données. Le travail se concentre sur l'infrastructure nécessaire au fonctionnement d'un serveur de base de données. Il ne prévoit pas le développement d'une application complète.
@@ -98,13 +89,6 @@ Vagrant.configure("2") do |config|
 end
 ```
 
-La VM a été démarrée puis administrée avec :
-
-```bash
-vagrant up
-vagrant ssh
-```
-
 ## 6. Installation de MariaDB
 
 MariaDB a été installé sur Debian :
@@ -162,13 +146,6 @@ phpMyAdmin a ensuite été installé et associé à Apache. L'interface est acce
 http://localhost:8080/phpmyadmin
 ```
 
-L'interface confirme les composants suivants :
-
-- MariaDB 10.11 sous Debian 12 ;
-- Apache 2.4 ;
-- PHP 8.2 ;
-- phpMyAdmin 5.2.
-
 ## 9. Utilisateurs MariaDB et séparation des droits
 
 Trois niveaux d'accès ont été prévus :
@@ -180,10 +157,6 @@ Trois niveaux d'accès ont été prévus :
 | `db_reader` | Consultation uniquement | `SELECT` |
 
 Les utilisateurs limités sont créés depuis la console d'administration MariaDB :
-
-```bash
-sudo mariadb
-```
 
 ```sql
 CREATE USER IF NOT EXISTS 'db_writer'@'localhost'
@@ -200,8 +173,6 @@ GRANT SELECT
 ON infrastructure_db.*
 TO 'db_reader'@'localhost';
 ```
-
-Les mots de passe réels ne doivent pas apparaître dans la documentation ou dans un dépôt Git.
 
 Les privilèges peuvent être contrôlés avec :
 
@@ -258,15 +229,6 @@ table inet filter {
 }
 ```
 
-La syntaxe a été contrôlée avant l'activation :
-
-```bash
-sudo nft -c -f /etc/nftables.conf
-sudo systemctl enable nftables
-sudo systemctl restart nftables
-sudo nft list ruleset
-```
-
 ### Flux autorisés
 
 | Service | Port | Utilité |
@@ -277,59 +239,6 @@ sudo nft list ruleset
 | DHCP | 67/UDP vers 68/UDP | Attribution de la configuration réseau |
 
 Le port MariaDB `3306/TCP` n'est pas autorisé en entrée. phpMyAdmin communique avec MariaDB localement dans la VM.
-
-## 11. Correction de la configuration Apache
-
-Apache fonctionnait, mais affichait l'avertissement `AH00558` concernant le nom complet du serveur. La correction prévue est :
-
-```bash
-echo "ServerName db-server" | sudo tee /etc/apache2/conf-available/servername.conf
-sudo a2enconf servername
-sudo systemctl reload apache2
-sudo apache2ctl configtest
-```
-
-Le résultat attendu du test est :
-
-```text
-Syntax OK
-```
-
-## 12. Vérifications effectuées
-
-Les services ont été contrôlés avec :
-
-```bash
-sudo systemctl status nftables apache2 mariadb --no-pager
-```
-
-État constaté :
-
-| Service | État | Interprétation |
-|---|---|---|
-| `nftables` | `active (exited)` | Les règles ont été chargées correctement |
-| `apache2` | `active (running)` | Le serveur Web fonctionne |
-| `mariadb` | `active (running)` | Le serveur de base de données accepte les requêtes |
-
-L'état `active (exited)` de nftables est normal. Le service charge les règles puis termine son processus sans supprimer les règles actives.
-
-Des messages `Access denied` ont été observés dans les journaux après d'anciennes tentatives de connexion. Ils ne signalent pas une panne des services. Une connexion actuelle réussie avec `db_admin` dans phpMyAdmin confirme le fonctionnement de l'authentification.
-
-## 13. État actuel du projet
-
-Les éléments suivants sont opérationnels :
-
-- VM Debian créée avec Vagrant ;
-- accès SSH à la VM ;
-- adresse IP privée configurée ;
-- MariaDB installé et actif ;
-- base `infrastructure_db` créée ;
-- Apache, PHP et phpMyAdmin installés ;
-- connexion phpMyAdmin avec `db_admin` ;
-- séparation prévue entre administrateur, rédacteur et lecteur ;
-- pare-feu nftables actif ;
-- MariaDB limité à l'interface locale ;
-- services activés au démarrage.
 
 ## 14. Prochaines étapes
 
