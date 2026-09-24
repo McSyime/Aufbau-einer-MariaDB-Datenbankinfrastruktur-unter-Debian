@@ -1,88 +1,69 @@
-
 # Aufbau einer sicheren MariaDB-Datenbankinfrastruktur unter Debian
 
-## 1. Présentation du projet
+## 1. Projektvorstellung
 
-### 1.1 Contexte
+### 1.1 Kontext
 
-Ce projet est réalisé dans le cadre de la modularbeit consacrée à l'implémentation d'une base de données. Il porte sur l'infrastructure nécessaire au fonctionnement d'un serveur de base de données. Le développement d'une application complète ne fait pas partie du périmètre.
+Dieses Projekt wird im Rahmen der Modularbeit zur Implementierung einer Datenbank durchgeführt. Es befasst sich mit der Infrastruktur, die für den Betrieb eines Datenbankservers erforderlich ist. Die Entwicklung einer vollständigen Anwendung gehört nicht zum Projektumfang.
 
-Une petite base relationnelle sert à vérifier l'installation, l'administration, les autorisations, la sécurité réseau, les sauvegardes et la restauration.
+Eine kleine relationale Datenbank dient dazu, die Installation, die Administration, die Berechtigungen, die Netzwerksicherheit, die Sicherungen und die Wiederherstellung zu überprüfen.
 
-### 1.2 Périmètre
+## 2. Ziele
 
-Le projet comprend :
+- eine Debian-VM mit Vagrant und VirtualBox bereitstellen;
+- MariaDB 10.11 installieren und betreiben;
+- die Datenbank mit phpMyAdmin administrieren;
+- das Prinzip der geringsten Rechte anwenden;
+- MariaDB auf die lokale Schnittstelle beschränken;
+- Verbindungen mit nftables filtern;
+- die Datenbank automatisch sichern;
+- die Integrität der Archive überprüfen;
+- die Daten in einer separaten Datenbank wiederherstellen;
 
-- une machine virtuelle Debian reproductible ;
-- un serveur MariaDB ;
-- une interface d'administration phpMyAdmin ;
-- une base de données de démonstration ;
-- plusieurs comptes avec des droits distincts ;
-- un pare-feu nftables ;
-- une sauvegarde automatisée ;
-- un test de restauration ;
-- des tests techniques documentés.
+## 3. Verwendete Werkzeuge
 
-## 2. Objectifs
-
-- déployer une VM Debian avec Vagrant et VirtualBox ;
-- installer et exploiter MariaDB 10.11 ;
-- administrer la base avec phpMyAdmin ;
-- appliquer le principe du moindre privilège ;
-- limiter MariaDB à l'interface locale ;
-- filtrer les connexions avec nftables ;
-- sauvegarder automatiquement la base ;
-- vérifier l'intégrité des archives ;
-- restaurer les données dans une base séparée ;
-- garantir la persistance après redémarrage ;
-- documenter les opérations et leurs résultats.
-
-## 3. Outils utilisés
-
-| Outil | Utilisation |
+| Werkzeug | Verwendung |
 |---|---|
-| Windows | Système hôte |
-| VirtualBox | Exécution de la VM |
-| Vagrant | Création et gestion reproductible de la VM |
-| Debian 12 Bookworm | Système d'exploitation du serveur |
-| MariaDB 10.11 | Système de gestion de base de données relationnelle |
-| Apache HTTP Server | Serveur Web de phpMyAdmin |
-| PHP | Exécution de phpMyAdmin |
-| phpMyAdmin | Administration graphique de MariaDB |
-| nftables | Filtrage des connexions réseau |
-| OpenSSH | Administration distante de Debian |
-| SQL | Création des tables, comptes et permissions |
-| `mariadb-dump` | Export logique de la base |
-| gzip | Compression et contrôle des sauvegardes |
-| cron | Planification des sauvegardes |
-| systemd | Gestion des services |
+| Windows | Host-Betriebssystem |
+| VirtualBox | Ausführung der VM |
+| Vagrant | Reproduzierbare Erstellung und Verwaltung der VM |
+| Debian 12 Bookworm | Betriebssystem des Servers |
+| MariaDB 10.11 | Relationales Datenbankmanagementsystem |
+| Apache HTTP Server | Webserver für phpMyAdmin |
+| PHP | Ausführung von phpMyAdmin |
+| phpMyAdmin | Grafische Administration von MariaDB |
+| nftables | Filterung der Netzwerkverbindungen |
+| OpenSSH | Fernadministration von Debian |
+| SQL | Erstellung von Tabellen, Konten und Berechtigungen |
+| `mariadb-dump` | Logischer Export der Datenbank |
+| gzip | Komprimierung und Überprüfung der Sicherungen |
+| cron | Planung der Sicherungen |
 
-Ces outils correspondent aux thèmes du cours : Debian, VirtualBox, Vagrant, modèle relationnel, MariaDB, LAMP, phpMyAdmin, SQL, sécurité, utilisateurs et intégrité des données.
+Diese Technologien entsprechen den Themen des Unterrichts: Debian, VirtualBox, Vagrant, relationales Modell, MariaDB, LAMP, phpMyAdmin, SQL, Sicherheit, Benutzer und Datenintegrität.
 
-## 4. Architecture
+## 4. Architektur
 
-| Élément | Configuration |
+| Element | Konfiguration |
 |---|---|
-| Machine hôte | Windows |
-| Hyperviseur | VirtualBox |
-| Gestion de la VM | Vagrant |
-| Machine virtuelle | Debian 12 |
-| Nom d'hôte | `db-server` |
-| Interface NAT | `eth0`, adresse `10.0.2.15/24` |
-| Interface privée | `eth1`, adresse `192.168.56.20/24` |
-| Mémoire vive | 2 Go |
-| Processeurs virtuels | 2 |
-| Accès SSH | `vagrant ssh`, port 22/TCP |
-| Interface Web | Apache et phpMyAdmin, port 80/TCP |
-| Redirection Vagrant | `127.0.0.1:8080` vers le port 80 de la VM |
-| Base principale | `infrastructure_db` |
-| Base de restauration | `infrastructure_restore_test` |
-| MariaDB | `127.0.0.1:3306` uniquement |
-| Fuseau horaire | `Europe/Zurich` |
+| Host-Rechner | Windows |
+| Hypervisor | VirtualBox |
+| VM-Verwaltung | Vagrant |
+| Virtuelle Maschine | Debian 12 |
+| Hostname | `db-server` |
+| NAT-Schnittstelle | `eth0`, Adresse `10.0.2.15/24` |
+| Private Schnittstelle | `eth1`, Adresse `192.168.56.20/24` |
+| Arbeitsspeicher | 2 GB |
+| Virtuelle Prozessoren | 2 |
+| SSH-Zugriff | `vagrant ssh`, Port 22/TCP |
+| Weboberfläche | Apache und phpMyAdmin, Port 80/TCP |
+| Vagrant-Portweiterleitung | `127.0.0.1:8080` zum Port 80 der VM |
+| Hauptdatenbank | `infrastructure_db` |
+| Wiederherstellungsdatenbank | `infrastructure_restore_test` |
+| MariaDB | nur `127.0.0.1:3306` |
 
-La VM utilise le NAT pour accéder à Internet et un réseau host-only pour communiquer avec Windows. Le port MariaDB n'est pas publié sur l'hôte.
+Die VM verwendet NAT für den Internetzugang und ein Host-only-Netzwerk für die Kommunikation mit Windows. Der MariaDB-Port wird nicht auf dem Host veröffentlicht.
 
-## 5. Création de la machine virtuelle
+## 5. Erstellung der virtuellen Maschine
 
 ```ruby
 Vagrant.configure("2") do |config|
@@ -110,18 +91,8 @@ Vagrant.configure("2") do |config|
 end
 ```
 
-Commandes principales :
 
-```powershell
-vagrant up
-vagrant ssh
-vagrant halt
-vagrant status
-```
-
-`vagrant halt` conserve la VM et ses données. `vagrant destroy` les supprimerait.
-
-## 6. Installation et sécurisation de MariaDB
+## 6. Installation und Absicherung von MariaDB
 
 ```bash
 sudo apt update
@@ -130,24 +101,24 @@ sudo systemctl enable --now mariadb
 sudo mariadb-secure-installation
 ```
 
-Mesures appliquées :
+Umgesetzte Massnahmen:
 
-- suppression des comptes anonymes ;
-- interdiction de la connexion distante de `root` ;
-- suppression de la base de test par défaut ;
-- administration locale avec `sudo mariadb` ;
-- comptes individuels pour administrer et utiliser la base.
+- Entfernung der anonymen Konten;
+- Verbot der Remote-Anmeldung von `root`;
+- Entfernung der standardmässigen Testdatenbank;
+- lokale Administration mit `sudo mariadb`;
+- individuelle Konten für die Administration und Nutzung der Datenbank.
 
-### 6.1 Restriction de l'écoute réseau
+### 6.1 Beschränkung der Netzwerk-Listening-Adresse
 
-Le fichier `/etc/mysql/mariadb.conf.d/99-local-bind.cnf` contient :
+Die Datei `/etc/mysql/mariadb.conf.d/99-local-bind.cnf` enthält:
 
 ```ini
 [mysqld]
 bind-address = 127.0.0.1
 ```
 
-La socket réseau gérée par systemd a été désactivée, puis MariaDB redémarré :
+Der von systemd verwaltete Netzwerk-Socket wurde deaktiviert und MariaDB anschliessend neu gestartet:
 
 ```bash
 sudo systemctl disable --now mariadb.socket
@@ -155,9 +126,9 @@ sudo systemctl restart mariadb
 sudo ss -lntp | grep 3306
 ```
 
-Résultat validé : `127.0.0.1:3306`. MariaDB n'est donc pas directement joignable depuis Windows.
+Validiertes Ergebnis: `127.0.0.1:3306`. MariaDB ist somit von Windows aus nicht direkt erreichbar.
 
-## 7. Apache, PHP et phpMyAdmin
+## 7. Apache, PHP und phpMyAdmin
 
 ```bash
 sudo apt install -y apache2 php libapache2-mod-php php-mysql
@@ -167,21 +138,21 @@ sudo a2enconf phpmyadmin
 sudo systemctl reload apache2
 ```
 
-Adresse depuis Windows :
+Adresse unter Windows:
 
 ```text
 http://localhost:8080/phpmyadmin
 ```
 
-Contrôle Apache :
+Überprüfung von Apache:
 
 ```bash
 sudo apache2ctl configtest
 ```
 
-Résultat attendu : `Syntax OK`.
+Erwartetes Ergebnis: `Syntax OK`.
 
-## 8. Base de données de démonstration
+## 8. Demonstrationsdatenbank
 
 ```sql
 CREATE DATABASE infrastructure_db
@@ -189,7 +160,7 @@ CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 8.1 Table de contrôle des services
+### 8.1 Tabelle zur Kontrolle der Dienste
 
 ```sql
 CREATE TABLE server_status (
@@ -200,7 +171,7 @@ CREATE TABLE server_status (
 );
 ```
 
-### 8.2 Table de test des permissions
+### 8.2 Tabelle zum Testen der Berechtigungen
 
 ```sql
 CREATE TABLE permission_test (
@@ -210,27 +181,27 @@ CREATE TABLE permission_test (
 );
 ```
 
-La ligne `Créé par db_admin` est conservée pour la démonstration.
+Die Zeile `Créé par db_admin` wird für die Demonstration beibehalten.
 
-## 9. Utilisateurs et privilèges
+## 9. Benutzer und Berechtigungen
 
-| Compte | Fonction | Droits sur `infrastructure_db` |
+| Konto | Funktion | Berechtigungen auf `infrastructure_db` |
 |---|---|---|
-| `db_admin` | Administration de la base | Tous les privilèges sur la base |
-| `db_writer` | Lecture et modification | `SELECT`, `INSERT`, `UPDATE`, `DELETE` |
-| `db_reader` | Consultation | `SELECT` |
+| `db_admin` | Administration der Datenbank | Alle Berechtigungen auf der Datenbank |
+| `db_writer` | Lesen und Ändern | `SELECT`, `INSERT`, `UPDATE`, `DELETE` |
+| `db_reader` | Nur Lesen | `SELECT` |
 
-Création depuis `sudo mariadb` :
+Erstellung über `sudo mariadb`:
 
 ```sql
 CREATE USER IF NOT EXISTS 'db_admin'@'localhost'
-IDENTIFIED BY '<mot_de_passe_admin>';
+IDENTIFIED BY '<Modularbeit_admin>';
 
 CREATE USER IF NOT EXISTS 'db_writer'@'localhost'
-IDENTIFIED BY '<mot_de_passe_writer>';
+IDENTIFIED BY '<Modularbeit_writer>';
 
 CREATE USER IF NOT EXISTS 'db_reader'@'localhost'
-IDENTIFIED BY '<mot_de_passe_reader>';
+IDENTIFIED BY '<Modularbeit_reader>';
 
 GRANT ALL PRIVILEGES ON infrastructure_db.*
 TO 'db_admin'@'localhost';
@@ -242,9 +213,8 @@ GRANT SELECT ON infrastructure_db.*
 TO 'db_reader'@'localhost';
 ```
 
-Les mots de passe réels ne sont pas conservés dans la documentation.
 
-Contrôle :
+Überprüfung:
 
 ```sql
 SHOW GRANTS FOR 'db_admin'@'localhost';
@@ -252,20 +222,20 @@ SHOW GRANTS FOR 'db_writer'@'localhost';
 SHOW GRANTS FOR 'db_reader'@'localhost';
 ```
 
-### 9.1 Résultats des tests
+### 9.1 Testergebnisse
 
-| Opération | `db_admin` | `db_writer` | `db_reader` |
+| Operation | `db_admin` | `db_writer` | `db_reader` |
 |---|:---:|:---:|:---:|
-| `SELECT` | Autorisé | Autorisé | Autorisé |
-| `INSERT` | Autorisé | Autorisé | Refusé |
-| `UPDATE` | Autorisé | Autorisé | Refusé |
-| `DELETE` | Autorisé | Autorisé | Refusé |
-| `CREATE TABLE` | Autorisé | Refusé | Refusé |
-| Gestion globale des comptes | Refusée | Refusée | Refusée |
+| `SELECT` | Erlaubt | Erlaubt | Erlaubt |
+| `INSERT` | Erlaubt | Erlaubt | Verweigert |
+| `UPDATE` | Erlaubt | Erlaubt | Verweigert |
+| `DELETE` | Erlaubt | Erlaubt | Verweigert |
+| `CREATE TABLE` | Erlaubt | Verweigert | Verweigert |
+| Globale Kontoverwaltung | Verweigert | Verweigert | Verweigert |
 
-Les refus de `db_reader` et `db_writer` ont produit l'erreur MariaDB `1142`. La création initiale des comptes avec `db_admin` a également été refusée, car `CREATE USER` est un privilège global. Ces résultats confirment le principe du moindre privilège.
+Die verweigerten Operationen von `db_reader` und `db_writer` erzeugten den MariaDB-Fehler `1142`. Die anfängliche Erstellung der Konten mit `db_admin` wurde ebenfalls verweigert, da `CREATE USER` eine globale Berechtigung ist. Diese Ergebnisse bestätigen das Prinzip der geringsten Rechte.
 
-## 10. Pare-feu nftables
+## 10. nftables-Firewall
 
 ```bash
 sudo apt install -y nftables
@@ -273,7 +243,7 @@ sudo cp /etc/nftables.conf /etc/nftables.conf.backup
 sudo systemctl enable nftables
 ```
 
-Configuration de `/etc/nftables.conf` :
+Konfiguration von `/etc/nftables.conf`:
 
 ```nft
 #!/usr/sbin/nft -f
@@ -306,7 +276,7 @@ table inet filter {
 }
 ```
 
-Validation :
+Validierung:
 
 ```bash
 sudo nft -c -f /etc/nftables.conf
@@ -314,26 +284,26 @@ sudo systemctl restart nftables
 sudo nft list ruleset
 ```
 
-| Service | Port | Fonction |
+| Dienst | Port | Funktion |
 |---|---:|---|
-| SSH | 22/TCP | Administration de Debian |
-| HTTP | 80/TCP | Apache et phpMyAdmin |
-| ICMP/ICMPv6 | Sans port | Tests et contrôle réseau |
-| DHCP | 67/UDP vers 68/UDP | Configuration réseau |
+| SSH | 22/TCP | Administration von Debian |
+| HTTP | 80/TCP | Apache und phpMyAdmin |
+| ICMP/ICMPv6 | Kein Port | Netzwerk- und Kontrolltests |
+| DHCP | 67/UDP zu 68/UDP | Netzwerkkonfiguration |
 
-Le port `3306/TCP` n'est pas autorisé en entrée.
+Der Port `3306/TCP` ist für eingehende Verbindungen nicht freigegeben.
 
-Test depuis Windows :
+Test unter Windows:
 
 ```powershell
 Test-NetConnection 192.168.56.20 -Port 3306
 ```
 
-Résultat observé : `PingSucceeded: True` et `TcpTestSucceeded: False`. La VM est joignable, mais MariaDB n'est pas accessible directement.
+Beobachtetes Ergebnis: `PingSucceeded: True` und `TcpTestSucceeded: False`. Die VM ist erreichbar, MariaDB jedoch nicht direkt zugänglich.
 
-## 11. Sauvegarde MariaDB
+## 11. MariaDB-Sicherung
 
-Répertoire protégé :
+Geschütztes Verzeichnis:
 
 ```bash
 sudo mkdir -p /var/backups/mariadb
@@ -341,7 +311,7 @@ sudo chown root:root /var/backups/mariadb
 sudo chmod 700 /var/backups/mariadb
 ```
 
-Script `/usr/local/sbin/backup-infrastructure-db` :
+Skript `/usr/local/sbin/backup-infrastructure-db`:
 
 ```bash
 #!/bin/bash
@@ -377,7 +347,7 @@ find "${BACKUP_DIR}" \
 echo "Sauvegarde créée : ${BACKUP_FILE}"
 ```
 
-Protection et exécution :
+Schutz und Ausführung:
 
 ```bash
 sudo chown root:root /usr/local/sbin/backup-infrastructure-db
@@ -386,9 +356,9 @@ sudo bash -n /usr/local/sbin/backup-infrastructure-db
 sudo /usr/local/sbin/backup-infrastructure-db
 ```
 
-Deux archives valides ont été créées durant les tests.
+Während der Tests wurden zwei gültige Archive erstellt.
 
-### 11.1 Vérification des archives
+### 11.1 Überprüfung der Archive
 
 ```bash
 sudo find /var/backups/mariadb \
@@ -402,16 +372,16 @@ sudo find /var/backups/mariadb \
     -exec zgrep -H 'permission_test' {} \;
 ```
 
-Aucune erreur gzip n'a été retournée. Les instructions `CREATE TABLE` et `INSERT INTO` de `permission_test` étaient présentes.
+gzip meldete keine Fehler. Die Anweisungen `CREATE TABLE` und `INSERT INTO` für `permission_test` waren vorhanden.
 
-## 12. Automatisation avec cron
+## 12. Automatisierung mit cron
 
 ```bash
 sudo apt install -y cron
 sudo systemctl enable --now cron
 ```
 
-Fichier `/etc/cron.d/mariadb-backup` :
+Datei `/etc/cron.d/mariadb-backup`:
 
 ```cron
 SHELL=/bin/bash
@@ -426,21 +396,21 @@ sudo chmod 644 /etc/cron.d/mariadb-backup
 sudo systemctl restart cron
 ```
 
-La sauvegarde est planifiée chaque jour à 02:00.
+Die Sicherung ist täglich um 02:00 Uhr geplant.
 
-### 12.1 Fuseau horaire
+### 12.1 Zeitzone
 
 ```bash
 sudo timedatectl set-timezone Europe/Zurich
 ```
 
-Résultat validé : fuseau `Europe/Zurich`, synchronisation NTP active. Cron s'exécutera à 02:00 heure suisse et suivra les changements d'heure.
+Validiertes Ergebnis: Zeitzone `Europe/Zurich`, NTP-Synchronisierung aktiv. Cron wird um 02:00 Uhr Schweizer Zeit ausgeführt und berücksichtigt automatisch die Zeitumstellungen.
 
-L'exécution manuelle est validée. La création automatique d'une archive par cron reste à confirmer dans `/var/log/mariadb-backup.log` après une exécution planifiée.
+Die manuelle Ausführung wurde validiert. Die automatische Erstellung eines Archivs durch cron muss nach einer geplanten Ausführung noch in `/var/log/mariadb-backup.log` bestätigt werden.
 
-## 13. Test de restauration
+## 13. Wiederherstellungstest
 
-Une base séparée a été créée pour protéger l'original :
+Zum Schutz des Originals wurde eine separate Datenbank erstellt:
 
 ```sql
 CREATE DATABASE infrastructure_restore_test
@@ -448,7 +418,7 @@ CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 ```
 
-Restauration :
+Wiederherstellung:
 
 ```bash
 sudo sh -c \
@@ -456,7 +426,7 @@ sudo sh -c \
 mariadb infrastructure_restore_test'
 ```
 
-Contrôles :
+Kontrollen:
 
 ```bash
 sudo mariadb infrastructure_restore_test -e "SHOW TABLES;"
@@ -464,94 +434,81 @@ sudo mariadb infrastructure_restore_test -e \
 "SELECT * FROM permission_test;"
 ```
 
-Résultats :
+Ergebnisse:
 
-- `permission_test` restaurée ;
-- `server_status` restaurée ;
-- ligne `Créé par db_admin` restaurée ;
-- base originale inchangée.
+- `permission_test` wurde wiederhergestellt;
+- `server_status` wurde wiederhergestellt;
+- die Zeile `Créé par db_admin` wurde wiederhergestellt;
+- die ursprüngliche Datenbank blieb unverändert.
 
-La sauvegarde permet donc de restaurer la structure et les données.
+Mit der Sicherung können somit die Struktur und die Daten wiederhergestellt werden.
 
-## 14. Validation après redémarrage
+## 14. Validierung nach dem Neustart
 
-La VM a été arrêtée avec `vagrant halt`, puis redémarrée avec `vagrant up`.
+Die VM wurde mit `vagrant halt` angehalten und anschliessend mit `vagrant up` neu gestartet.
 
 ```bash
 sudo systemctl is-active ssh apache2 mariadb nftables cron
 sudo systemctl is-enabled ssh apache2 mariadb nftables cron
 ```
 
-Les cinq services étaient `active` et `enabled`.
+Alle fünf Dienste waren `active` und `enabled`.
 
-Après redémarrage, les éléments suivants étaient toujours présents :
+Nach dem Neustart waren folgende Elemente weiterhin vorhanden:
 
-- `infrastructure_db` ;
-- `infrastructure_restore_test` ;
-- `permission_test` et sa donnée ;
-- écoute MariaDB limitée à `127.0.0.1:3306` ;
-- règles nftables et politiques `drop` ;
-- services Apache, SSH, MariaDB, nftables et cron.
+- `infrastructure_db`;
+- `infrastructure_restore_test`;
+- `permission_test` und ihr Datensatz;
+- die MariaDB-Listening-Adresse war weiterhin auf `127.0.0.1:3306` beschränkt;
+- die nftables-Regeln und die `drop`-Richtlinien;
+- die Dienste Apache, SSH, MariaDB, nftables und cron.
 
-La persistance est validée.
+Die Persistenz wurde validiert.
 
-## 15. Tableau final des tests
+## 15. Abschliessende Testtabelle
 
-| Test | Résultat observé | État |
+| Test | Beobachtetes Ergebnis | Status |
 |---|---|:---:|
-| Nom d'hôte `db-server` | Conforme | Validé |
-| Adresse privée `192.168.56.20` | Conforme | Validé |
-| Accès Internet et DNS | 0 % de perte vers `debian.org` | Validé |
-| SSH | `active` et `enabled` | Validé |
-| Apache | `active` et `enabled` | Validé |
-| MariaDB | `active` et `enabled` | Validé |
-| nftables | `active` et `enabled` | Validé |
-| cron | `active` et `enabled` | Validé |
-| phpMyAdmin | Connexion réussie | Validé |
-| Écoute MariaDB | `127.0.0.1:3306` | Validé |
-| Port 3306 depuis Windows | `TcpTestSucceeded: False` | Validé |
-| Lecture avec `db_reader` | Autorisée | Validé |
-| Écriture avec `db_reader` | Erreur 1142 | Validé |
-| CRUD avec `db_writer` | Autorisé | Validé |
-| `CREATE TABLE` avec `db_writer` | Erreur 1142 | Validé |
-| Administration avec `db_admin` | Conforme | Validé |
-| Sauvegarde manuelle | Deux archives créées | Validé |
-| Intégrité gzip | Aucune erreur | Validé |
-| Contenu SQL | Tables et données présentes | Validé |
-| Restauration | Tables et données récupérées | Validé |
-| Persistance après redémarrage | Services et données conservés | Validé |
-| Exécution automatique cron | À observer à 02:00 | En attente |
+| Hostname `db-server` | Konform | Bestanden |
+| Private Adresse `192.168.56.20` | Konform | Bestanden |
+| Internet- und DNS-Zugang | 0 % Verlust zu `debian.org` | Bestanden |
+| SSH | `active` und `enabled` | Bestanden |
+| Apache | `active` und `enabled` | Bestanden |
+| MariaDB | `active` und `enabled` | Bestanden |
+| nftables | `active` und `enabled` | Bestanden |
+| cron | `active` und `enabled` | Bestanden |
+| phpMyAdmin | Anmeldung erfolgreich | Bestanden |
+| MariaDB-Listening-Adresse | `127.0.0.1:3306` | Bestanden |
+| Port 3306 von Windows aus | `TcpTestSucceeded: False` | Bestanden |
+| Lesen mit `db_reader` | Erlaubt | Bestanden |
+| Schreiben mit `db_reader` | Fehler 1142 | Bestanden |
+| CRUD mit `db_writer` | Erlaubt | Bestanden |
+| `CREATE TABLE` mit `db_writer` | Fehler 1142 | Bestanden |
+| Administration mit `db_admin` | Konform | Bestanden |
+| Manuelle Sicherung | Zwei Archive erstellt | Bestanden |
+| gzip-Integrität | Kein Fehler | Bestanden |
+| SQL-Inhalt | Tabellen und Daten vorhanden | Bestanden |
+| Wiederherstellung | Tabellen und Daten wiederhergestellt | Bestanden |
+| Persistenz nach Neustart | Dienste und Daten erhalten | Bestanden |
+| Automatische cron-Ausführung | Um 02:00 Uhr zu beobachten | Ausstehend |
 
-## 16. Compétences mises en évidence
+## 16. Nachgewiesene Kompetenzen
 
-- virtualisation d'un serveur Linux ;
-- utilisation de Vagrant et VirtualBox ;
-- configuration réseau NAT et host-only ;
-- installation et administration de MariaDB ;
-- utilisation de SQL et d'une base relationnelle ;
-- administration avec phpMyAdmin ;
-- création de comptes et gestion des privilèges ;
-- application du principe du moindre privilège ;
-- limitation de l'écoute réseau d'un service ;
-- configuration et validation de nftables ;
-- gestion des services avec systemd ;
-- analyse des ports avec `ss` et PowerShell ;
-- automatisation avec Bash et cron ;
-- sauvegarde, compression et restauration ;
-- diagnostic des erreurs d'authentification et de permissions ;
-- validation de la persistance après redémarrage ;
-- documentation d'une infrastructure technique.
+- Virtualisierung eines Linux-Servers;
+- Verwendung von Vagrant und VirtualBox;
+- Konfiguration von NAT- und Host-only-Netzwerken;
+- Installation und Administration von MariaDB;
+- Verwendung von SQL und einer relationalen Datenbank;
+- Administration mit phpMyAdmin;
+- Erstellung von Konten und Verwaltung von Berechtigungen;
+- Anwendung des Prinzips der geringsten Rechte;
+- Beschränkung der Netzwerk-Listening-Adresse eines Dienstes;
+- Konfiguration und Validierung von nftables;
+- Verwaltung von Diensten mit systemd;
+- Analyse von Ports mit `ss` und PowerShell;
+- Automatisierung mit Bash und cron;
+- Sicherung, Komprimierung und Wiederherstellung;
+- Diagnose von Authentifizierungs- und Berechtigungsfehlern;
+- Validierung der Persistenz nach einem Neustart;
+- Dokumentation einer technischen Infrastruktur.
 
-## 17. Conclusion et travaux restants
-
-L'infrastructure est fonctionnelle. Les services, les données, les permissions, le pare-feu, les sauvegardes manuelles et la restauration ont été validés.
-
-Travaux restants :
-
-1. confirmer une exécution automatique de cron dans `/var/log/mariadb-backup.log` ;
-2. tester une dernière fois les ports 22, 80 et 3306 depuis Windows après redémarrage ;
-3. créer un instantané Vagrant nommé `infrastructure-validee` ;
-4. préparer un diagramme d'architecture ;
-5. préparer la présentation et la démonstration finale.
-
-Cette réalisation répond au thème de la modularbeit en présentant une implémentation de base de données orientée infrastructure, administration, sécurité et continuité des données.
